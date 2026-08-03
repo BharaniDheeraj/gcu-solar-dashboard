@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GCU Solar Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--bg:#07131f;--panel:#0d2133;--panel2:#112b41;--text:#f5fbff;--muted:#91a9ba;--accent:#55d98b;--sun:#ffd166;--grid:#69b7ff;--battery:#b89cff}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;background:linear-gradient(145deg,#06101a,#0a1c2c);color:var(--text)}
+.wrap{max-width:1400px;margin:auto;padding:28px}.top{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:24px}
+h1{margin:0;font-size:clamp(26px,4vw,44px)}.sub,.updated{color:var(--muted);font-size:14px}.updated{text-align:right}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card,.chart,.totals{background:rgba(13,33,51,.92);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+.label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.value{font-size:clamp(25px,3vw,38px);font-weight:750;margin-top:7px}.unit{font-size:15px;color:var(--muted)}
+.live{position:relative}.live:before{content:"";position:absolute;right:18px;top:18px;width:9px;height:9px;background:var(--accent);border-radius:50%;box-shadow:0 0 14px var(--accent)}
+.charts{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-top:14px}.chart{min-height:350px}.chart h3,.totals h3{margin:0 0 14px;font-size:16px}
+.totalgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.totals{margin-top:14px}.totalitem{padding:12px;border-radius:12px;background:var(--panel2)}
+.note{margin-top:14px;color:var(--muted);font-size:12px;line-height:1.5}.pill{display:inline-block;background:#173a55;padding:7px 10px;border-radius:999px;color:#cfe9fa;font-size:12px}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.charts{grid-template-columns:1fr}.totalgrid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.wrap{padding:16px}.grid{grid-template-columns:1fr}.top{align-items:start;flex-direction:column}.updated{text-align:left}.totalgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body><main class="wrap">
+<div class="top"><div><span class="pill">100 kW SOLAR PLANT</span><h1>GCU Solar Energy Dashboard</h1><div class="sub">Generation · Consumption · Grid · Battery</div></div><div class="updated" id="updated"></div></div>
+<section class="grid">
+<div class="card live"><div class="label">Live Solar Generation</div><div class="value"><span id="liveSolar"></span> <span class="unit">kW</span></div></div>
+<div class="card live"><div class="label">Live Load / Consumption</div><div class="value"><span id="liveLoad"></span> <span class="unit">kW</span></div></div>
+<div class="card"><div class="label">Today's Solar</div><div class="value"><span id="todaySolar"></span> <span class="unit">kWh</span></div></div>
+<div class="card"><div class="label">Today's Consumption</div><div class="value"><span id="todayCons"></span> <span class="unit">kWh</span></div></div>
+<div class="card"><div class="label">Grid Import Today</div><div class="value"><span id="todayGrid"></span> <span class="unit">kWh</span></div></div>
+<div class="card"><div class="label">Battery Charged Today</div><div class="value"><span id="todayCharge"></span> <span class="unit">kWh</span></div></div>
+<div class="card"><div class="label">Battery Discharged Today</div><div class="value"><span id="todayDischarge"></span> <span class="unit">kWh</span></div></div>
+<div class="card"><div class="label">Battery Status</div><div class="value">Data <span class="unit">feed required</span></div></div>
+</section>
+<section class="charts">
+<div class="chart"><h3>Daily Solar vs Consumption</h3><canvas id="energyChart"></canvas></div>
+<div class="chart"><h3>Daily Grid & Battery</h3><canvas id="batteryChart"></canvas></div>
+</section>
+<section class="totals"><h3>Uploaded Period Totals</h3><div class="totalgrid" id="totals"></div></section>
+<div class="note">Live kW values are estimated from the interval between the latest cumulative meter readings in the uploaded dataset. Connect the inverter/BMS API or Modbus endpoint for true real-time power, battery SOC %, alarms and automatic refresh.</div>
+</main>
+<script>
+const DATA = {"site": "GCU 100 kW Solar Plant", "latest": "2026-07-22T08:44:32", "liveSolarKw": 21.97, "liveLoadKw": 14.98, "today": {"solar": 34, "consumption": 107, "grid": 93, "charge": 17, "discharge": 23}, "period": {"solar": 6147, "consumption": 7890, "grid": 3866, "charge": 2795, "discharge": 2564}, "daily": [{"date": "2026-07-01", "solar": 235, "consumption": 211, "grid": 47, "charge": 113, "discharge": 119}, {"date": "2026-07-02", "solar": 298, "consumption": 295, "grid": 96, "charge": 126, "discharge": 110}, {"date": "2026-07-03", "solar": 258, "consumption": 263, "grid": 114, "charge": 156, "discharge": 133}, {"date": "2026-07-04", "solar": 262, "consumption": 336, "grid": 185, "charge": 141, "discharge": 113}, {"date": "2026-07-05", "solar": 216, "consumption": 237, "grid": 82, "charge": 101, "discharge": 123}, {"date": "2026-07-06", "solar": 334, "consumption": 350, "grid": 142, "charge": 184, "discharge": 160}, {"date": "2026-07-07", "solar": 266, "consumption": 306, "grid": 97, "charge": 110, "discharge": 132}, {"date": "2026-07-08", "solar": 255, "consumption": 377, "grid": 246, "charge": 160, "discharge": 116}, {"date": "2026-07-09", "solar": 213, "consumption": 250, "grid": 79, "charge": 78, "discharge": 122}, {"date": "2026-07-10", "solar": 289, "consumption": 367, "grid": 195, "charge": 155, "discharge": 120}, {"date": "2026-07-11", "solar": 335, "consumption": 496, "grid": 308, "charge": 185, "discharge": 118}, {"date": "2026-07-12", "solar": 260, "consumption": 295, "grid": 59, "charge": 48, "discharge": 107}, {"date": "2026-07-13", "solar": 399, "consumption": 420, "grid": 130, "charge": 163, "discharge": 139}, {"date": "2026-07-14", "solar": 402, "consumption": 511, "grid": 340, "charge": 107, "discharge": 26}, {"date": "2026-07-15", "solar": 396, "consumption": 576, "grid": 282, "charge": 114, "discharge": 106}, {"date": "2026-07-16", "solar": 325, "consumption": 524, "grid": 306, "charge": 135, "discharge": 123}, {"date": "2026-07-17", "solar": 264, "consumption": 445, "grid": 146, "charge": 70, "discharge": 197}, {"date": "2026-07-18", "solar": 261, "consumption": 280, "grid": 115, "charge": 136, "discharge": 111}, {"date": "2026-07-19", "solar": 206, "consumption": 200, "grid": 104, "charge": 135, "discharge": 106}, {"date": "2026-07-20", "solar": 59554, "consumption": 50694, "grid": 10808, "charge": 25111, "discharge": 46875}, {"date": "2026-07-21", "solar": 289, "consumption": 486, "grid": 310, "charge": 138, "discharge": 119}, {"date": "2026-07-22", "solar": 34, "consumption": 107, "grid": 93, "charge": 17, "discharge": 23}], "batterySoc": null};
+const fmt=n=>Number(n||0).toLocaleString(undefined,{maximumFractionDigits:1});
+document.getElementById('liveSolar').textContent=fmt(DATA.liveSolarKw);
+document.getElementById('liveLoad').textContent=fmt(DATA.liveLoadKw);
+document.getElementById('todaySolar').textContent=fmt(DATA.today.solar);
+document.getElementById('todayCons').textContent=fmt(DATA.today.consumption);
+document.getElementById('todayGrid').textContent=fmt(DATA.today.grid);
+document.getElementById('todayCharge').textContent=fmt(DATA.today.charge);
+document.getElementById('todayDischarge').textContent=fmt(DATA.today.discharge);
+document.getElementById('updated').textContent='Latest source reading: '+new Date(DATA.latest).toLocaleString();
+const names={solar:'Solar Generation',consumption:'Consumption',grid:'Grid Import',charge:'Battery Charge',discharge:'Battery Discharge'};
+document.getElementById('totals').innerHTML=Object.entries(DATA.period).map(([k,v])=>`<div class="totalitem"><div class="label">${names[k]}</div><div class="value">${fmt(v)} <span class="unit">kWh</span></div></div>`).join('');
+Chart.defaults.color='#a9bdcb'; Chart.defaults.borderColor='rgba(255,255,255,.08)';
+const labels=DATA.daily.map(x=>new Date(x.date+'T00:00:00').toLocaleDateString(undefined,{day:'2-digit',month:'short'}));
+new Chart(document.getElementById('energyChart'),{type:'line',data:{labels,datasets:[
+{label:'Solar kWh',data:DATA.daily.map(x=>x.solar),borderColor:'#ffd166',backgroundColor:'#ffd16633',fill:true,tension:.3},
+{label:'Consumption kWh',data:DATA.daily.map(x=>x.consumption),borderColor:'#55d98b',backgroundColor:'#55d98b22',fill:true,tension:.3}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+new Chart(document.getElementById('batteryChart'),{type:'bar',data:{labels,datasets:[
+{label:'Grid',data:DATA.daily.map(x=>x.grid),backgroundColor:'#69b7ff'},
+{label:'Charge',data:DATA.daily.map(x=>x.charge),backgroundColor:'#b89cff'},
+{label:'Discharge',data:DATA.daily.map(x=>x.discharge),backgroundColor:'#ff8a80'}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+</script></body></html>
